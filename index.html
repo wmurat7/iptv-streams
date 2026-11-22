@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>IPTV Smarters Pro - Samsung Tizen Smart TV Edition</title>
-    <link rel="stylesheet" href="css/style.css">
-    <script src="vendor/hls.min.js"></script>
-    <script src="vendor/mpegts.js"></script>
+    <link rel="stylesheet" href="css/style.css?v=102">
+    <script src="vendor/hls.min.js?v=102"></script>
+    <script src="vendor/mpegts.js?v=102"></script>
 </head>
 <body>
     <!-- Top Header (Persistent) with Top Nav Tabs -->
@@ -40,6 +40,7 @@
 
             <div class="header-actions">
                 <button class="header-btn nav-item" id="btn-header-back" style="display:none;" onclick="window.app.goBack()">◀ Geri</button>
+                <button class="header-btn nav-item" id="btn-header-refresh" onclick="window.location.reload(true)" title="Sayfayı Yenile">🔄 Yenile</button>
                 <button class="header-btn nav-item" id="btn-header-settings" onclick="window.app.openSettings()">⚙️ Ayarlar</button>
             </div>
         </div>
@@ -396,11 +397,11 @@
     <!-- TOAST NOTIFICATION -->
     <div id="toast-msg" class="toast-notification hidden"></div>
 
-    <!-- Scripts -->
-    <script src="js/epg-manager.js"></script>
-    <script src="js/favorites-manager.js"></script>
-    <script src="js/player.js"></script>
-    <script src="js/navigation.js"></script>
-    <script src="js/app.js"></script>
+    <!-- Scripts with Cache Buster -->
+    <script src="js/epg-manager.js?v=102"></script>
+    <script src="js/favorites-manager.js?v=102"></script>
+    <script src="js/player.js?v=102"></script>
+    <script src="js/navigation.js?v=102"></script>
+    <script src="js/app.js?v=102"></script>
 </body>
 </html>
