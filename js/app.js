@@ -101,6 +101,10 @@ class IPTVSmartersApp {
                     this.movies = m.movies || [];
                     const movCount = document.getElementById('dash-count-movies');
                     if (movCount) movCount.innerText = `${this.movies.length.toLocaleString('tr-TR')} Film`;
+                    if (this.currentView === 'MOVIES') {
+                        this.renderMovieCategories();
+                        this.selectMovieCategory(0);
+                    }
                 })
                 .catch(e => console.warn('Movies fetch error:', e));
 
@@ -112,6 +116,10 @@ class IPTVSmartersApp {
                     this.series = s.series || [];
                     const serCount = document.getElementById('dash-count-series');
                     if (serCount) serCount.innerText = `${this.series.length.toLocaleString('tr-TR')} Dizi`;
+                    if (this.currentView === 'SERIES') {
+                        this.renderSeriesCategories();
+                        this.selectSeriesCategory(0);
+                    }
                 })
                 .catch(e => console.warn('Series fetch error:', e));
 
