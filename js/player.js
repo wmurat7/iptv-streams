@@ -45,14 +45,14 @@ class VideoPlayer {
                 this.mpegtsPlayer.unload();
                 this.mpegtsPlayer.detachMediaElement();
                 this.mpegtsPlayer.destroy();
-            } catch (e) {}
+            } catch (e) { }
             this.mpegtsPlayer = null;
         }
 
         if (this.hls) {
             try {
                 this.hls.destroy();
-            } catch (e) {}
+            } catch (e) { }
             this.hls = null;
         }
 
@@ -60,7 +60,7 @@ class VideoPlayer {
             try {
                 webapis.avplay.stop();
                 webapis.avplay.close();
-            } catch (e) {}
+            } catch (e) { }
         }
     }
 
@@ -122,14 +122,14 @@ class VideoPlayer {
                 this.mpegtsPlayer.play().catch(e => {
                     console.warn('[mpegts] Autoplay fallback:', e);
                     this.videoEl.src = targetUrl;
-                    this.videoEl.play().catch(() => {});
+                    this.videoEl.play().catch(() => { });
                 });
 
                 this.mpegtsPlayer.on(window.mpegts.Events.ERROR, (type, detail, info) => {
                     console.warn('[mpegts] Hata, doğrudan video elementine geçiliyor:', type);
                     this.destroyActiveEngines();
                     this.videoEl.src = targetUrl;
-                    this.videoEl.play().catch(() => {});
+                    this.videoEl.play().catch(() => { });
                 });
                 return;
             } catch (err) {

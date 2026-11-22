@@ -130,13 +130,29 @@ class IPTVSmartersApp {
         if (pushHistory && viewName !== this.currentView) {
             try {
                 history.pushState({ view: viewName }, '', '#' + viewName.toLowerCase());
-            } catch (e) {}
+            } catch (e) { }
         }
 
         this.currentView = viewName;
         this.nav.currentView = viewName;
 
         document.querySelectorAll('.app-view').forEach(v => v.classList.add('hidden'));
+
+        // Update Top Navigation Bar active state
+        document.querySelectorAll('.top-nav-btn').forEach(btn => btn.classList.remove('active'));
+        if (viewName === 'DASHBOARD') {
+            const b = document.getElementById('btn-nav-home');
+            if (b) b.classList.add('active');
+        } else if (viewName === 'LIVE') {
+            const b = document.getElementById('btn-nav-live');
+            if (b) b.classList.add('active');
+        } else if (viewName === 'MOVIES') {
+            const b = document.getElementById('btn-nav-movies');
+            if (b) b.classList.add('active');
+        } else if (viewName === 'SERIES') {
+            const b = document.getElementById('btn-nav-series');
+            if (b) b.classList.add('active');
+        }
 
         const backBtn = document.getElementById('btn-header-back');
         if (backBtn) {
@@ -186,6 +202,25 @@ class IPTVSmartersApp {
     closeModal() {
         document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
         this.nav.currentView = this.currentView;
+    }
+
+    clearAndExitSearch(type) {
+        if (type === 'live') {
+            const input = document.getElementById('live-search-input');
+            if (input) { input.value = ''; input.blur(); }
+            this.filterLiveChannels('');
+            this.nav.focusFirstContentItem();
+        } else if (type === 'movies') {
+            const input = document.getElementById('movie-search-input');
+            if (input) { input.value = ''; input.blur(); }
+            this.filterMovies('');
+            this.nav.focusFirstContentItem();
+        } else if (type === 'series') {
+            const input = document.getElementById('series-search-input');
+            if (input) { input.value = ''; input.blur(); }
+            this.filterSeries('');
+            this.nav.focusFirstContentItem();
+        }
     }
 
     /* ==========================================================================

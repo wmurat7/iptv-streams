@@ -1,5 +1,6 @@
 /**
  * Universal Samsung TV Remote & Keyboard D-Pad Navigation Engine
+ * Optimized for 10-foot TV viewing & instant search escape
  */
 class TVNavigation {
     constructor(app) {
@@ -73,18 +74,49 @@ class TVNavigation {
     }
 
     handleKeyDown(e) {
-        // Prevent backspace from navigating away from page if not in text input
-        if (this.isReturnKey(e)) {
-            const isInput = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
-            if (!isInput) {
+        const code = e.keyCode;
+        const isInput = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
+
+        // SPECIAL CASE: User is currently typing inside a search box or text input
+        if (isInput) {
+            // If RETURN / BACK / ESC is pressed: unfocus input and return to list immediately!
+            if (this.isReturnKey(e)) {
                 e.preventDefault();
                 e.stopPropagation();
-                this.handleReturn();
+                e.target.blur();
+                this.focusFirstContentItem();
                 return;
             }
+
+            // If DOWN arrow or ENTER is pressed: blur input and focus first channel/movie!
+            if (this.matches('DOWN', code) || this.matches('ENTER', code)) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.target.blur();
+                this.focusFirstContentItem();
+                return;
+            }
+
+            // If LEFT arrow is pressed and input is empty or at start: blur and focus categories!
+            if (this.matches('LEFT', code) && (!e.target.value || e.target.selectionStart === 0)) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.target.blur();
+                this.focusActiveCategory();
+                return;
+            }
+
+            // Normal typing inside input
+            return;
         }
 
-        const code = e.keyCode;
+        // Return key pressed outside input
+        if (this.isReturnKey(e)) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.handleReturn();
+            return;
+        }
 
         // In Fullscreen Playing Mode
         if (this.currentView === 'PLAYER') {
@@ -120,6 +152,37 @@ class TVNavigation {
         }
     }
 
+    focusFirstContentItem() {
+        if (this.currentView === 'LIVE') {
+            const firstCh = document.querySelector('.live-channel-card');
+            if (firstCh) {
+                this.setFocus(firstCh);
+                return;
+            }
+        } else if (this.currentView === 'MOVIES') {
+            const firstM = document.querySelector('#movie-grid .poster-card');
+            if (firstM) {
+                this.setFocus(firstM);
+                return;
+            }
+        } else if (this.currentView === 'SERIES') {
+            const firstS = document.querySelector('#series-grid .poster-card');
+            if (firstS) {
+                this.setFocus(firstS);
+                return;
+            }
+        }
+        this.focusActiveCategory();
+    }
+
+    focusActiveCategory() {
+        let activeCat = document.querySelector('.app-view:not(.hidden) .live-cat-item.active') ||
+                        document.querySelector('.app-view:not(.hidden) .live-cat-item');
+        if (activeCat) {
+            this.setFocus(activeCat);
+        }
+    }
+
     handlePlayerNav(e, code) {
         this.app.showOSD();
 
@@ -139,7 +202,7 @@ class TVNavigation {
     }
 
     handleReturn() {
-        console.log('[Nav] Geri tuşuna basıldı. Mevcut görünüm:', this.currentView);
+        console.log('[Nav] Geri tuşuna basıldı. Görünüm:', this.currentView);
 
         // 1. If Fullscreen Video
         if (this.currentView === 'PLAYER') {
@@ -156,17 +219,14 @@ class TVNavigation {
         // 3. If in LIVE TV
         if (this.currentView === 'LIVE') {
             const focused = document.querySelector('.nav-item.focused');
-            const inChannels = focused && (focused.classList.contains('live-channel-card') || focused.closest('#live-ch-list') || focused.closest('.live-col-preview'));
+            const inChannels = focused && (focused.classList.contains('live-channel-card') || focused.closest('#live-ch-list') || focused.closest('.live-col-preview') || focused.id === 'live-search-input');
             
-            // If focused on channel or preview, move focus back to categories first
+            // If focused on channel/preview/search, move focus back to categories sidebar
             if (inChannels) {
-                const activeCat = document.querySelector('.live-cat-item.active') || document.querySelector('.live-cat-item');
-                if (activeCat) {
-                    this.setFocus(activeCat);
-                    return;
-                }
+                this.focusActiveCategory();
+                return;
             }
-            // If already in categories (or no category focused), go back to Dashboard!
+            // If already in categories, go back to Dashboard!
             this.app.switchView('DASHBOARD');
             return;
         }
@@ -174,29 +234,26 @@ class TVNavigation {
         // 4. If in MOVIES or SERIES
         if (this.currentView === 'MOVIES' || this.currentView === 'SERIES') {
             const focused = document.querySelector('.nav-item.focused');
-            const inGrid = focused && (focused.classList.contains('poster-card') || focused.closest('.poster-grid'));
+            const inGrid = focused && (focused.classList.contains('poster-card') || focused.closest('.poster-grid') || focused.classList.contains('search-input'));
 
-            // If focused in grid, move back to categories list
+            // If focused in grid or search, move back to categories list
             if (inGrid) {
-                const isMovie = this.currentView === 'MOVIES';
-                const listEl = document.getElementById(isMovie ? 'movie-cat-list' : 'series-cat-list');
-                const activeCat = listEl ? (listEl.querySelector('.live-cat-item.active') || listEl.querySelector('.live-cat-item')) : null;
-                if (activeCat) {
-                    this.setFocus(activeCat);
-                    return;
-                }
+                this.focusActiveCategory();
+                return;
             }
             // If already in categories, go back to Dashboard!
             this.app.switchView('DASHBOARD');
             return;
         }
 
-        // 5. If in Dashboard, nothing to return to
-        console.log('[Nav] Zaten Ana Ekrandasınız.');
+        // 5. If in Dashboard, prompt user
+        if (this.app.showToast) {
+            this.app.showToast('Uygulamadan çıkmak için TV kumandasındaki [Exit / Smart Hub] tuşuna basın.');
+        }
     }
 
     navigate(direction) {
-        const focusable = Array.from(document.querySelectorAll('.app-view:not(.hidden) .nav-item, .modal-overlay:not(.hidden) .nav-item'));
+        const focusable = Array.from(document.querySelectorAll('.app-view:not(.hidden) .nav-item, .modal-overlay:not(.hidden) .nav-item, .smarters-header .nav-item'));
         if (!focusable.length) return;
 
         let currentIndex = focusable.indexOf(document.activeElement);
@@ -217,26 +274,26 @@ class TVNavigation {
             let primaryDist = 0;
             let secondaryDist = 0;
 
-            if (direction === 'RIGHT' && targetRect.left >= currentRect.right - 5) {
+            if (direction === 'RIGHT' && targetRect.left >= currentRect.right - 8) {
                 isEligible = true;
                 primaryDist = targetRect.left - currentRect.right;
                 secondaryDist = Math.abs(targetRect.top - currentRect.top);
-            } else if (direction === 'LEFT' && targetRect.right <= currentRect.left + 5) {
+            } else if (direction === 'LEFT' && targetRect.right <= currentRect.left + 8) {
                 isEligible = true;
                 primaryDist = currentRect.left - targetRect.right;
                 secondaryDist = Math.abs(targetRect.top - currentRect.top);
-            } else if (direction === 'DOWN' && targetRect.top >= currentRect.bottom - 5) {
+            } else if (direction === 'DOWN' && targetRect.top >= currentRect.bottom - 8) {
                 isEligible = true;
                 primaryDist = targetRect.top - currentRect.bottom;
                 secondaryDist = Math.abs(targetRect.left - currentRect.left);
-            } else if (direction === 'UP' && targetRect.bottom <= currentRect.top + 5) {
+            } else if (direction === 'UP' && targetRect.bottom <= currentRect.top + 8) {
                 isEligible = true;
                 primaryDist = currentRect.top - targetRect.bottom;
                 secondaryDist = Math.abs(targetRect.left - currentRect.left);
             }
 
             if (isEligible) {
-                const totalDist = primaryDist * 1.5 + secondaryDist;
+                const totalDist = primaryDist * 1.4 + secondaryDist;
                 if (totalDist < minDistance) {
                     minDistance = totalDist;
                     bestCandidate = target;
@@ -268,7 +325,7 @@ class TVNavigation {
     }
 
     handleEnter() {
-        const focused = document.querySelector('.nav-item.focused');
+        const focused = document.querySelector('.nav-item.focused') || document.activeElement;
         if (focused) {
             focused.click();
         }

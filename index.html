@@ -9,18 +9,28 @@
     <script src="vendor/mpegts.js"></script>
 </head>
 <body>
-    <!-- Top Header (Persistent) -->
+    <!-- Top Header (Persistent) with Top Nav Tabs -->
     <header class="smarters-header">
         <div class="header-left">
             <div class="smarters-logo">
                 <span class="logo-badge">SMARTERS PRO</span>
-                <span class="logo-text">IPTV <span>SAMSUNG TIZEN</span></span>
+                <span class="logo-text">IPTV <span>TIZEN</span></span>
             </div>
             <div class="user-status-badge">
                 <span class="status-dot"></span>
                 <span id="header-user-status">Aktif: WMurat</span>
             </div>
         </div>
+
+        <!-- Center Side-by-Side Main Category Switcher -->
+        <nav class="top-nav-bar">
+            <button class="top-nav-btn nav-item active" id="btn-nav-home" onclick="window.app.switchView('DASHBOARD')">🏠 Ana Ekran</button>
+            <button class="top-nav-btn nav-item" id="btn-nav-live" onclick="window.app.switchView('LIVE')">📺 CANLI TV</button>
+            <button class="top-nav-btn nav-item" id="btn-nav-movies" onclick="window.app.switchView('MOVIES')">🎬 FİLMLER</button>
+            <button class="top-nav-btn nav-item" id="btn-nav-series" onclick="window.app.switchView('SERIES')">🍿 DİZİLER</button>
+            <button class="top-nav-btn nav-item" id="btn-nav-favs" onclick="window.app.openFavorites()">⭐ Favoriler</button>
+            <button class="top-nav-btn nav-item" id="btn-nav-adult" onclick="window.app.openAdultCategory()">🔞 +18 Yetişkin</button>
+        </nav>
 
         <div class="header-right">
             <div class="clock-widget">
@@ -30,13 +40,12 @@
 
             <div class="header-actions">
                 <button class="header-btn nav-item" id="btn-header-back" style="display:none;" onclick="window.app.goBack()">◀ Geri</button>
-                <button class="header-btn nav-item" id="btn-header-home" onclick="window.app.switchView('DASHBOARD')">🏠 Ana Ekran</button>
                 <button class="header-btn nav-item" id="btn-header-settings" onclick="window.app.openSettings()">⚙️ Ayarlar</button>
             </div>
         </div>
     </header>
 
-    <!-- VIEW 1: DASHBOARD (SMARTERS PRO 3 HERO TILES) -->
+    <!-- VIEW 1: DASHBOARD (SMARTERS PRO 3 HERO TILES SIDE-BY-SIDE) -->
     <div id="view-dashboard" class="app-view">
         <div class="dashboard-body">
             <div class="hero-tiles-grid">
@@ -77,11 +86,11 @@
                 </div>
             </div>
 
-            <!-- Bottom Quick Access Bar -->
+            <!-- Bottom Quick Access Bar (Large, Highly Readable) -->
             <div class="bottom-quick-bar">
                 <button class="quick-bar-btn nav-item" onclick="window.app.switchView('LIVE')">📅 Canlı Yayın Akışı (EPG)</button>
-                <button class="quick-bar-btn nav-item" onclick="window.app.openFavorites()">⭐ Favorilerim</button>
-                <button class="quick-bar-btn nav-item" onclick="window.app.openAdultCategory()">🔞 Yetişkin (+18 Kanalları)</button>
+                <button class="quick-bar-btn nav-item" onclick="window.app.openFavorites()">⭐ Favori Kanallarım</button>
+                <button class="quick-bar-btn nav-item" onclick="window.app.openAdultCategory()">🔞 Yetişkin Kanalları (+18)</button>
                 <button class="quick-bar-btn nav-item" onclick="window.app.openSettings()">⚙️ Ayarlar & Hesap Detayları</button>
             </div>
         </div>
@@ -99,7 +108,8 @@
             <!-- Col 2: Channel Cards -->
             <div class="live-col-channels">
                 <div class="channel-search-box">
-                    <input type="text" id="live-search-input" class="search-input nav-item" placeholder="🔍 Kanal Ara..." oninput="window.app.filterLiveChannels(this.value)">
+                    <input type="text" id="live-search-input" class="search-input nav-item" placeholder="🔍 Kanal Ara... (Geri çıkmak için [Geri] tuşuna basın)" oninput="window.app.filterLiveChannels(this.value)">
+                    <button class="search-exit-btn nav-item" onclick="window.app.clearAndExitSearch('live')" title="Aramadan Çık">✕</button>
                     <span class="channel-count-tag" id="live-filtered-count">0 Kanal</span>
                 </div>
                 <div class="channel-scroll-box" id="live-ch-list"></div>
@@ -127,14 +137,14 @@
 
                     <div class="epg-next-box">
                         <div class="epg-next-label">Sonraki Program:</div>
-                        <div id="epg-next-title" style="font-weight:700; margin-top:2px;">-</div>
+                        <div id="epg-next-title" style="font-weight:700; font-size:1.05rem; margin-top:2px;">-</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- VIEW 3: MOVIES (2 COLUMNS: CATEGORIES | POSTER GRID) -->
+    <!-- VIEW 3: MOVIES (2 COLUMNS: CATEGORIES | COMPACT POSTER GRID) -->
     <div id="view-movies" class="app-view hidden">
         <div class="vod-body">
             <div class="vod-categories-col">
@@ -146,6 +156,7 @@
                     <div class="vod-section-title" id="movie-active-cat-title">Vizyon Filmler</div>
                     <div class="vod-search-wrap">
                         <input type="text" id="movie-search-input" class="search-input nav-item" placeholder="🔍 Film Ara..." oninput="window.app.filterMovies(this.value)">
+                        <button class="search-exit-btn nav-item" onclick="window.app.clearAndExitSearch('movies')" title="Aramadan Çık">✕</button>
                         <span class="channel-count-tag" id="movie-count-badge">0 Film</span>
                     </div>
                 </div>
@@ -156,7 +167,7 @@
         </div>
     </div>
 
-    <!-- VIEW 4: SERIES (2 COLUMNS: CATEGORIES | POSTER GRID) -->
+    <!-- VIEW 4: SERIES (2 COLUMNS: CATEGORIES | COMPACT POSTER GRID) -->
     <div id="view-series" class="app-view hidden">
         <div class="vod-body">
             <div class="vod-categories-col">
@@ -168,6 +179,7 @@
                     <div class="vod-section-title" id="series-active-cat-title">Güncel TV Dizileri</div>
                     <div class="vod-search-wrap">
                         <input type="text" id="series-search-input" class="search-input nav-item" placeholder="🔍 Dizi Ara..." oninput="window.app.filterSeries(this.value)">
+                        <button class="search-exit-btn nav-item" onclick="window.app.clearAndExitSearch('series')" title="Aramadan Çık">✕</button>
                         <span class="channel-count-tag" id="series-count-badge">0 Dizi</span>
                     </div>
                 </div>
@@ -194,7 +206,7 @@
             </div>
             <div class="osd-right">
                 <div class="osd-quality-badge" id="osd-quality-badge">FHD 1080p / 50fps</div>
-                <div style="font-size:0.85rem; color:var(--text-muted); margin-top:4px;">Çıkmak için [GERİ] tuşuna basın</div>
+                <div style="font-size:0.95rem; color:var(--text-muted); margin-top:4px;">Çıkmak için [GERİ] tuşuna basın</div>
             </div>
         </div>
     </div>
@@ -253,7 +265,8 @@
         <div class="modal-box pin-modal-box">
             <div class="pin-icon">🔒</div>
             <h2>Ebeveyn Denetimi</h2>
-            <p style="color:var(--text-muted); margin-bottom:15px;">Yetişkin (+18) kanallarına erişmek için 4 haneli PIN kodunuzu girin:</p>
+            <div class="pin-hint-badge">Varsayılan Şifre: 0000</div>
+            <p style="color:var(--text-muted); margin-bottom:15px; font-size:1rem;">Yetişkin (+18) kanallarına erişmek için 4 haneli PIN kodunuzu girin:</p>
             
             <div class="pin-display-row">
                 <div class="pin-dot" id="pin-dot-1"></div>
@@ -279,7 +292,7 @@
                 <button class="pin-key nav-item pin-key-ok" onclick="window.app.submitPin()">Giriş</button>
             </div>
 
-            <div style="margin-top:15px;">
+            <div style="margin-top:18px;">
                 <button class="btn-cancel nav-item" onclick="window.app.closeModal()">İptal</button>
             </div>
         </div>
@@ -315,11 +328,11 @@
                 <!-- TAB 2: PARENTAL -->
                 <div id="set-tab-parental" class="settings-pane hidden">
                     <h2>Ebeveyn Denetimi & PIN Değiştirme</h2>
-                    <p style="color:var(--text-muted); margin-bottom:20px;">Yetişkin (+18) kanalların kilidini açmak için kullanılan 4 haneli PIN kodunu buradan değiştirebilirsiniz.</p>
-                    <div style="max-width:300px;">
-                        <label style="display:block; margin-bottom:5px;">Mevcut PIN:</label>
+                    <p style="color:var(--text-muted); margin-bottom:20px;">Yetişkin (+18) kanalların kilidini açmak için kullanılan 4 haneli PIN kodunu buradan değiştirebilirsiniz. (Varsayılan: 0000)</p>
+                    <div style="max-width:320px;">
+                        <label style="display:block; margin-bottom:6px; font-weight:700;">Mevcut PIN:</label>
                         <input type="password" id="input-old-pin" class="search-input nav-item" maxlength="4" placeholder="0000" style="margin-bottom:15px;">
-                        <label style="display:block; margin-bottom:5px;">Yeni PIN:</label>
+                        <label style="display:block; margin-bottom:6px; font-weight:700;">Yeni PIN:</label>
                         <input type="password" id="input-new-pin" class="search-input nav-item" maxlength="4" placeholder="Yeni 4 Haneli PIN" style="margin-bottom:20px;">
                         <button class="btn-primary nav-item" onclick="window.app.changePin()">PIN Kodunu Güncelle</button>
                     </div>
@@ -329,19 +342,19 @@
                 <div id="set-tab-format" class="settings-pane hidden">
                     <h2>Yayın Formatı Seçimi</h2>
                     <p style="color:var(--text-muted); margin-bottom:20px;">Televizyonunuz için en uygun yayın akışı formatını seçin:</p>
-                    <div style="display:flex; flex-direction:column; gap:15px; max-width:400px;">
+                    <div style="display:flex; flex-direction:column; gap:15px; max-width:440px;">
                         <label class="radio-box nav-item">
                             <input type="radio" name="stream-format" value="ts" checked onchange="window.app.setStreamFormat('ts')">
                             <div>
-                                <div style="font-weight:700;">MPEG-TS (.ts) - Önerilen</div>
-                                <div style="font-size:0.85rem; color:var(--text-muted);">En hızlı kanal geçişi ve canlı spor yayınları için düşük gecikme.</div>
+                                <div style="font-weight:800; font-size:1.1rem;">MPEG-TS (.ts) - Önerilen</div>
+                                <div style="font-size:0.9rem; color:var(--text-muted);">En hızlı kanal geçişi ve canlı spor yayınları için sıfır gecikme.</div>
                             </div>
                         </label>
                         <label class="radio-box nav-item">
                             <input type="radio" name="stream-format" value="m3u8" onchange="window.app.setStreamFormat('m3u8')">
                             <div>
-                                <div style="font-weight:700;">HLS (.m3u8)</div>
-                                <div style="font-size:0.85rem; color:var(--text-muted);">Adaptif bant genişliği ve internet dalgalanmalarına karşı koruma.</div>
+                                <div style="font-weight:800; font-size:1.1rem;">HLS (.m3u8)</div>
+                                <div style="font-size:0.9rem; color:var(--text-muted);">Adaptif bant genişliği ve internet dalgalanmalarına karşı koruma.</div>
                             </div>
                         </label>
                     </div>
@@ -362,7 +375,7 @@
                     <h2>Hakkında</h2>
                     <div class="info-table">
                         <div class="info-row"><span class="info-lbl">Uygulama:</span><span class="info-val">IPTV Smarters Pro - Samsung Tizen Edition</span></div>
-                        <div class="info-row"><span class="info-lbl">Sürüm:</span><span class="info-val">v3.2.0 (Stand-Alone Offline Engine)</span></div>
+                        <div class="info-row"><span class="info-lbl">Sürüm:</span><span class="info-val">v3.3.0 (Large TV UI Edition)</span></div>
                         <div class="info-row"><span class="info-lbl">Platform:</span><span class="info-val">Samsung Smart TV (Tizen OS 4.0 UHD)</span></div>
                         <div class="info-row"><span class="info-lbl">Video Motoru:</span><span class="info-val">MPEG-TS / HLS Dual Engine</span></div>
                         <div class="info-row"><span class="info-lbl">Durum:</span><span class="info-val text-green">24/7 Bağımsız Bulut & Yerel Çalışma</span></div>
@@ -376,7 +389,7 @@
     <div id="loading-overlay" class="modal-overlay hidden">
         <div style="display:flex; flex-direction:column; align-items:center; gap:20px;">
             <div class="spinner"></div>
-            <div id="loading-text" style="font-size:1.3rem; font-weight:700;">Yükleniyor...</div>
+            <div id="loading-text" style="font-size:1.4rem; font-weight:800;">Yükleniyor...</div>
         </div>
     </div>
 
