@@ -3,6 +3,11 @@
  * Standalone High-Performance Client Controller
  */
 
+// Utility: convert any value to string safely (must be BEFORE the class to avoid TDZ)
+function str(val) {
+    return val !== undefined && val !== null ? String(val) : '';
+}
+
 class IPTVSmartersApp {
     constructor() {
         this.player = null;
@@ -333,7 +338,7 @@ class IPTVSmartersApp {
             return;
         }
 
-        const limit = Math.min(channels.length, 120);
+        const limit = Math.min(channels.length, 500);
         for (let i = 0; i < limit; i++) {
             const ch = channels[i];
             const epg = EPGManager.getProgramForChannel(ch.n);
@@ -410,10 +415,17 @@ class IPTVSmartersApp {
 
     toggleActiveFavorite() {
         if (!this.activeLiveChannel) return;
+        const ch = this.activeLiveChannel;
         const isAdded = FavoritesManager.toggleFavorite({
-            id: this.activeLiveChannel.i,
-            name: this.activeLiveChannel.n,
-            logo: this.activeLiveChannel.l
+            id: ch.i,
+            name: ch.n,
+            logo: ch.l,
+            // Store in same format as channel objects so rendering works
+            i: ch.i,
+            n: ch.n,
+            l: ch.l,
+            c: ch.c,
+            num: ch.num
         });
         this.showToast(isAdded ? '⭐ Favorilere eklendi!' : 'Favorilerden kaldırıldı.');
         if (this.currentView === 'LIVE') {
@@ -511,14 +523,14 @@ class IPTVSmartersApp {
             return;
         }
 
-        const limit = Math.min(items.length, 120);
+        const limit = Math.min(items.length, 300);
         for (let i = 0; i < limit; i++) {
             const m = items[i];
             const card = document.createElement('div');
             card.className = 'poster-card nav-item';
             card.innerHTML = `
                 <div class="poster-img-wrap">
-                    <img src="${m.p || ''}" onerror="this.src='https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=300'"/>
+                    <img src="${m.p || ''}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=300'"/>
                     ${m.r ? `<div class="poster-rating">★ ${m.r}</div>` : ''}
                 </div>
                 <div class="poster-info">
@@ -538,9 +550,16 @@ class IPTVSmartersApp {
         const modal = document.getElementById('modal-vod');
         document.getElementById('vod-modal-title').innerText = item.n;
         document.getElementById('vod-modal-cat').innerText = this.activeMovieCategory ? this.activeMovieCategory.name : 'Film';
-        document.getElementById('vod-modal-desc').innerText = `${item.n} filmi, yüksek çözünürlüklü ve kesintisiz Türkçe seslendirme ile hemen izleyebilirsiniz.`;
+        // Show real description/plot if available; otherwise show genre info
+        const desc = item.plot || item.desc || `${item.n} — ${this.activeMovieCategory ? this.activeMovieCategory.name : 'Film'}. Yüksek çözünürlüklü ve kesintisiz izleyebilirsiniz.`;
+        document.getElementById('vod-modal-desc').innerText = desc;
         document.getElementById('vod-modal-poster').src = item.p || '';
-        document.getElementById('vod-modal-rating').innerText = item.r ? `⭐ ${item.r}` : '⭐ 8.0';
+        document.getElementById('vod-modal-rating').innerText = item.r ? `⭐ ${item.r}` : '⭐ —';
+        // Show year and duration if available
+        const yearEl = document.getElementById('vod-modal-year');
+        const durEl = document.getElementById('vod-modal-duration');
+        if (yearEl) yearEl.innerText = item.year || '';
+        if (durEl) durEl.innerText = item.dur || '';
 
         modal.classList.remove('hidden');
         this.nav.currentView = 'MODAL';
@@ -635,14 +654,14 @@ class IPTVSmartersApp {
             return;
         }
 
-        const limit = Math.min(items.length, 120);
+        const limit = Math.min(items.length, 300);
         for (let i = 0; i < limit; i++) {
             const s = items[i];
             const card = document.createElement('div');
             card.className = 'poster-card nav-item';
             card.innerHTML = `
                 <div class="poster-img-wrap">
-                    <img src="${s.p || ''}" onerror="this.src='https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=300'"/>
+                    <img src="${s.p || ''}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=300'"/>
                     ${s.r ? `<div class="poster-rating">★ ${s.r}</div>` : ''}
                 </div>
                 <div class="poster-info">
@@ -665,7 +684,7 @@ class IPTVSmartersApp {
         const modal = document.getElementById('modal-series');
         document.getElementById('series-modal-title').innerText = seriesItem.n;
         document.getElementById('series-modal-cover').src = seriesItem.p || '';
-        document.getElementById('series-modal-rating').innerText = seriesItem.r ? `⭐ ${seriesItem.r}` : '⭐ 8.2';
+        document.getElementById('series-modal-rating').innerText = seriesItem.r ? `⭐ ${seriesItem.r}` : '';
         document.getElementById('series-modal-plot').innerText = (details && details.plot) || seriesItem.plot || `${seriesItem.n} dizisinin tüm sezon ve bölümleri.`;
 
         modal.classList.remove('hidden');
@@ -678,23 +697,24 @@ class IPTVSmartersApp {
         let seasonKeys = [];
         if (details && details.episodes) {
             seasonKeys = Object.keys(details.episodes);
-        } else {
-            seasonKeys = ['1', '2', '3'];
         }
 
-        seasonKeys.forEach((sNum, idx) => {
-            const btn = document.createElement('button');
-            btn.className = `season-tab-btn nav-item ${idx === 0 ? 'active' : ''}`;
-            btn.innerText = `Sezon ${sNum}`;
-            btn.addEventListener('click', () => {
-                tabsBox.querySelectorAll('.season-tab-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
-                this.renderSeriesEpisodes(sNum);
-            });
-            tabsBox.appendChild(btn);
-        });
-
         if (seasonKeys.length > 0) {
+            seasonKeys.forEach((sNum, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `season-tab-btn nav-item ${idx === 0 ? 'active' : ''}`;
+                btn.innerText = `Sezon ${sNum}`;
+                btn.addEventListener('click', () => {
+                    tabsBox.querySelectorAll('.season-tab-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+                    this.renderSeriesEpisodes(sNum);
+                });
+                tabsBox.appendChild(btn);
+            });
             this.renderSeriesEpisodes(seasonKeys[0]);
+        } else {
+            // No cached details - fetch from API
+            tabsBox.innerHTML = '<div style="padding:10px; color:var(--text-muted);">Sezon bilgileri yükleniyor...</div>';
+            this.fetchSeriesEpisodes(sid, '1');
         }
     }
 
@@ -709,15 +729,11 @@ class IPTVSmartersApp {
         if (details && details.episodes && details.episodes[seasonNum]) {
             eps = details.episodes[seasonNum];
         } else {
-            // Mock episodes if not in pre-fetched top 40
-            for (let i = 1; i <= 10; i++) {
-                eps.push({
-                    id: `${sid}-${seasonNum}-${i}`,
-                    num: i,
-                    title: `Sezon ${seasonNum} - Bölüm ${i}`,
-                    ext: 'mp4'
-                });
-            }
+            // No pre-fetched episodes: show placeholder message
+            epBox.innerHTML = '<div style="padding:20px; color:var(--text-muted); text-align:center;">Bu dizinin bölüm verileri yükleniyor... Lütfen internet bağlantınızı kontrol edin veya daha sonra tekrar deneyin.</div>';
+            // Try fetching from API dynamically
+            this.fetchSeriesEpisodes(sid, seasonNum);
+            return;
         }
 
         eps.forEach(ep => {
@@ -738,7 +754,7 @@ class IPTVSmartersApp {
     }
 
     playSeriesEpisode(ep) {
-        const ext = ep.ext || 'mp4';
+        const ext = ep.ext || 'mkv';
         const streamUrl = `${this.account.server}/series/${this.account.username}/${this.account.password}/${ep.id}.${ext}`;
 
         const osdName = document.getElementById('osd-channel-name');
@@ -751,6 +767,58 @@ class IPTVSmartersApp {
         this.closeModal();
         this.player.play(streamUrl);
         this.enterFullscreen();
+    }
+
+    // Fetch series episodes dynamically from Xtream API
+    async fetchSeriesEpisodes(seriesId, seasonNum) {
+        try {
+            const url = `${this.account.server}/player_api.php?username=${this.account.username}&password=${this.account.password}&action=get_series_info&series_id=${seriesId}`;
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error('API yanıt vermedi');
+            const data = await resp.json();
+
+            if (data && data.episodes) {
+                // Cache for future use
+                if (!this.seriesDetails[seriesId]) this.seriesDetails[seriesId] = {};
+                this.seriesDetails[seriesId].episodes = {};
+                this.seriesDetails[seriesId].plot = (data.info && data.info.plot) || '';
+
+                for (const [sNum, epList] of Object.entries(data.episodes)) {
+                    this.seriesDetails[seriesId].episodes[sNum] = epList.map(ep => ({
+                        id: ep.id,
+                        num: ep.episode_num || ep.sort || 1,
+                        title: ep.title || `Sezon ${sNum} - Bölüm ${ep.episode_num || 1}`,
+                        ext: (ep.container_extension || 'mkv')
+                    }));
+                }
+
+                // Re-render season tabs and episodes
+                const tabsBox = document.getElementById('series-season-tabs');
+                tabsBox.innerHTML = '';
+                const seasonKeys = Object.keys(this.seriesDetails[seriesId].episodes);
+                seasonKeys.forEach((sNum, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = `season-tab-btn nav-item ${sNum === seasonNum ? 'active' : (idx === 0 && !seasonKeys.includes(seasonNum) ? 'active' : '')}`;
+                    btn.innerText = `Sezon ${sNum}`;
+                    btn.addEventListener('click', () => {
+                        tabsBox.querySelectorAll('.season-tab-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+                        this.renderSeriesEpisodes(sNum);
+                    });
+                    tabsBox.appendChild(btn);
+                });
+
+                // Render the requested season
+                const targetSeason = seasonKeys.includes(seasonNum) ? seasonNum : seasonKeys[0];
+                this.renderSeriesEpisodes(targetSeason);
+            } else {
+                const epBox = document.getElementById('series-episodes-list');
+                epBox.innerHTML = '<div style="padding:20px; color:var(--text-muted); text-align:center;">Bu dizi için bölüm bilgisi bulunamadı.</div>';
+            }
+        } catch (e) {
+            console.warn('[Series] Bölüm verisi yüklenemedi:', e);
+            const epBox = document.getElementById('series-episodes-list');
+            epBox.innerHTML = '<div style="padding:20px; color:var(--accent-red); text-align:center;">Bölüm verileri yüklenemedi. İnternet bağlantısını kontrol edin.</div>';
+        }
     }
 
     /* ==========================================================================
@@ -911,11 +979,6 @@ class IPTVSmartersApp {
             el.classList.add('hidden');
         }, 3000);
     }
-}
-
-// Utility for str
-function str(val) {
-    return val !== undefined && val !== null ? String(val) : '';
 }
 
 document.addEventListener('DOMContentLoaded', () => {

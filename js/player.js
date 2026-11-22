@@ -73,7 +73,8 @@ class VideoPlayer {
 
         this.destroyActiveEngines();
 
-        // If running in local PC dev server (port 3000), route via proxy to prevent browser CORS
+        // On Samsung TV (Tizen), streams play directly without proxy
+        // On local PC dev server (port 3000), route via proxy for CORS
         const isLocalDev = window.location.port === '3000';
         const targetUrl = isLocalDev ? `/api/proxy?url=${encodeURIComponent(streamUrl)}` : streamUrl;
 
