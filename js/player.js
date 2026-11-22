@@ -1,10 +1,10 @@
 /**
  * Universal TV Video Player Engine
  * Supports:
- * - mpegts.js (Hardware-accelerated MSE demuxing for raw MPEG-TS .ts live streams)
- * - Hls.js (M3U8 HLS streams)
+ * - Direct stream playback (Zero PC dependence)
  * - Samsung Tizen AVPlay (webapis.avplay)
- * - Native HTML5 Video (.mp4, .mkv)
+ * - Native HTML5 Video (.ts, .m3u8, .mp4, .mkv)
+ * - mpegts.js & Hls.js fallback
  */
 class VideoPlayer {
     constructor(videoElementId) {
@@ -33,7 +33,7 @@ class VideoPlayer {
         });
 
         this.videoEl.addEventListener('error', (e) => {
-            console.error('[Player] Video element hatası:', e);
+            console.warn('[Player] Video element hatası:', e);
             if (this.onStateChange) this.onStateChange('error');
         });
     }
@@ -73,19 +73,20 @@ class VideoPlayer {
 
         this.destroyActiveEngines();
 
-        // Pass through local proxy to bypass CORS and follow internal redirects
-        const proxyUrl = `/api/proxy?url=${encodeURIComponent(streamUrl)}`;
+        // If running in local PC dev server (port 3000), route via proxy to prevent browser CORS
+        const isLocalDev = window.location.port === '3000';
+        const targetUrl = isLocalDev ? `/api/proxy?url=${encodeURIComponent(streamUrl)}` : streamUrl;
 
         // 1. Tizen Native AVPlay check
         if (this.isTizenNative) {
             try {
-                webapis.avplay.open(proxyUrl);
+                webapis.avplay.open(targetUrl);
                 webapis.avplay.setDisplayRect(0, 0, window.innerWidth, window.innerHeight);
                 webapis.avplay.prepareAsync(() => {
                     webapis.avplay.play();
                 }, (err) => {
-                    console.warn('[AVPlay] Hata, fallback deneniyor:', err);
-                    this.playWithWeb(proxyUrl, streamUrl);
+                    console.warn('[AVPlay] Fallback deneniyor:', err);
+                    this.playWithWeb(targetUrl, streamUrl);
                 });
                 return;
             } catch (err) {
@@ -93,21 +94,20 @@ class VideoPlayer {
             }
         }
 
-        this.playWithWeb(proxyUrl, streamUrl);
+        this.playWithWeb(targetUrl, streamUrl);
     }
 
-    playWithWeb(proxyUrl, originalUrl) {
+    playWithWeb(targetUrl, originalUrl) {
         const isTs = originalUrl.includes('.ts') || originalUrl.includes('output=mpegts');
         const isM3u8 = originalUrl.includes('.m3u8');
 
-        // 2. MPEG-TS Live Stream via mpegts.js (Transmuxes .ts to MP4 MSE in browser)
+        // 2. MPEG-TS Live Stream via mpegts.js (MSE demuxing)
         if (isTs && window.mpegts && window.mpegts.isSupported()) {
-            console.log('[Player] mpegts.js motoru başlatılıyor...');
             try {
                 this.mpegtsPlayer = window.mpegts.createPlayer({
                     type: 'mse',
                     isLive: true,
-                    url: proxyUrl
+                    url: targetUrl
                 }, {
                     enableWorker: true,
                     lazyLoad: false,
@@ -119,10 +119,17 @@ class VideoPlayer {
 
                 this.mpegtsPlayer.attachMediaElement(this.videoEl);
                 this.mpegtsPlayer.load();
-                this.mpegtsPlayer.play().catch(e => console.warn('[mpegts] Autoplay:', e));
+                this.mpegtsPlayer.play().catch(e => {
+                    console.warn('[mpegts] Autoplay fallback:', e);
+                    this.videoEl.src = targetUrl;
+                    this.videoEl.play().catch(() => {});
+                });
 
                 this.mpegtsPlayer.on(window.mpegts.Events.ERROR, (type, detail, info) => {
-                    console.warn('[mpegts] Hata:', type, detail, info);
+                    console.warn('[mpegts] Hata, doğrudan video elementine geçiliyor:', type);
+                    this.destroyActiveEngines();
+                    this.videoEl.src = targetUrl;
+                    this.videoEl.play().catch(() => {});
                 });
                 return;
             } catch (err) {
@@ -132,40 +139,36 @@ class VideoPlayer {
 
         // 3. HLS Stream via Hls.js
         if (isM3u8 && window.Hls && window.Hls.isSupported()) {
-            console.log('[Player] Hls.js motoru başlatılıyor...');
-            this.hls = new window.Hls({
-                enableWorker: true,
-                lowLatencyMode: true,
-                backBufferLength: 30
-            });
-            this.hls.loadSource(proxyUrl);
-            this.hls.attachMedia(this.videoEl);
-            this.hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
-                this.videoEl.play().catch(e => console.warn('[Hls] Autoplay:', e));
-            });
-            return;
+            try {
+                this.hls = new window.Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    backBufferLength: 30
+                });
+                this.hls.loadSource(targetUrl);
+                this.hls.attachMedia(this.videoEl);
+                this.hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
+                    this.videoEl.play().catch(e => console.warn('[Hls] Autoplay:', e));
+                });
+                return;
+            } catch (err) {
+                console.warn('[Hls] Başlatma hatası:', err);
+            }
         }
 
-        // 4. Fallback Native HTML5 Video (MP4 / WebM / Native HLS)
-        this.videoEl.src = proxyUrl;
-        this.videoEl.load();
-        this.videoEl.play().catch(e => console.warn('[NativeVideo] Play:', e));
+        // 4. Fallback Native HTML5 Video Tag (MP4 / WebM / Native HLS / TV hardware decode)
+        this.videoEl.src = targetUrl;
+        this.videoEl.play().catch(e => console.warn('[Native Video] Autoplay:', e));
     }
 
     toggleAspectRatio() {
         this.currentAspectIndex = (this.currentAspectIndex + 1) % this.aspectRatios.length;
-        const mode = this.aspectRatios[this.currentAspectIndex];
-        this.videoEl.style.objectFit = mode;
-        console.log('[Player] En-Boy Oranı:', mode);
-        return mode;
-    }
-
-    stop() {
-        this.destroyActiveEngines();
+        const ratio = this.aspectRatios[this.currentAspectIndex];
         if (this.videoEl) {
-            this.videoEl.pause();
-            this.videoEl.removeAttribute('src');
-            this.videoEl.load();
+            this.videoEl.style.objectFit = ratio;
+        }
+        if (window.app && window.app.showToast) {
+            window.app.showToast(`En-Boy Oranı: ${ratio.toUpperCase()}`);
         }
     }
 }
