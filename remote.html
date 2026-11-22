@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smarters Pro - TV Bağlantı Kumandası</title>
+    <style>
+        :root {
+            --bg: #090d16;
+            --card: #131926;
+            --accent: #ffb400;
+            --accent-blue: #00d2ff;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); padding: 20px; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .card { background: var(--card); border: 1px solid rgba(255,255,255,0.1); border-radius: 18px; padding: 25px; width: 100%; max-width: 480px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); }
+        .header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .badge { background: linear-gradient(135deg, #ffb400, #ff7300); color: #000; font-weight: 800; padding: 5px 12px; border-radius: 6px; font-size: 0.85rem; }
+        h1 { font-size: 1.35rem; font-weight: 800; }
+        
+        .tabs { display: flex; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 4px; margin-bottom: 20px; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; color: var(--muted); font-weight: 700; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .tab-btn.active { background: var(--card); color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+        input, textarea { width: 100%; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 12px; color: #fff; font-size: 0.95rem; outline: none; }
+        input:focus, textarea:focus { border-color: var(--accent); }
+        textarea { height: 90px; resize: none; }
+
+        .btn-row { display: flex; gap: 10px; margin-top: 15px; }
+        .btn { flex: 1; padding: 14px; border: none; border-radius: 10px; font-weight: 800; font-size: 1rem; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: linear-gradient(135deg, #ffb400, #ff8800); color: #000; }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-paste { background: rgba(255,255,255,0.08); color: var(--text); }
+
+        .toast { display: none; margin-top: 15px; padding: 12px; border-radius: 8px; font-size: 0.92rem; text-align: center; }
+        .toast.success { display: block; background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.3); }
+        .toast.error { display: block; background: rgba(231, 76, 60, 0.15); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <span class="badge">SMARTERS</span>
+            <h1>Samsung TV'ye Hesap Aktar</h1>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" id="tab-m3u" onclick="switchTab('m3u')">M3U Linki</button>
+            <button class="tab-btn" id="tab-xtream" onclick="switchTab('xtream')">Xtream Codes API</button>
+        </div>
+
+        <!-- M3U Form -->
+        <div id="form-m3u">
+            <div class="form-group">
+                <label>M3U veya M3U_PLUS Linki:</label>
+                <textarea id="m3u-url" placeholder="http://iptv-sunucu.com:8080/get.php?username=...&password=...&type=m3u_plus"></textarea>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-paste" onclick="pasteClipboard()">📋 Yapıştır</button>
+                <button class="btn btn-primary" onclick="sendM3U()">🚀 TV'ye Gönder</button>
+            </div>
+        </div>
+
+        <!-- Xtream Codes Form -->
+        <div id="form-xtream" style="display:none;">
+            <div class="form-group">
+                <label>Sunucu Adresi (Port ile):</label>
+                <input type="text" id="xt-server" placeholder="http://iptv-sunucusu.com:8080">
+            </div>
+            <div class="form-group">
+                <label>Kullanıcı Adı:</label>
+                <input type="text" id="xt-user" placeholder="Kullanıcı Adı">
+            </div>
+            <div class="form-group">
+                <label>Şifre:</label>
+                <input type="password" id="xt-pass" placeholder="Şifre">
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="sendXtream()">🚀 TV'ye Giriş Yap</button>
+            </div>
+        </div>
+
+        <div id="toast" class="toast"></div>
+    </div>
+
+    <!-- Parental Lock (+18) Card -->
+    <div class="card" style="margin-top: 25px; border-color: rgba(231, 76, 60, 0.3);">
+        <div class="header">
+            <span class="badge" style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: #fff;">+18 GÜVENLİK</span>
+            <h1>Yetişkin Kanalları (PIN Kilidi)</h1>
+        </div>
+
+        <p style="color: var(--muted); font-size: 0.9rem; margin-bottom: 15px;">
+            Yetişkin kanalları varsayılan olarak TV'de <b>tamamen gizlidir</b>. PIN kodu girerek kilidi açabilir veya tekrar kilitleyebilirsiniz.
+        </p>
+
+        <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.95rem; font-weight: 600;">Şu Anki Durum:</span>
+            <span id="adult-status-badge" style="padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.85rem; background: rgba(231, 76, 60, 0.2); color: #e74c3c;">🔒 KİLİTLİ (GİZLİ)</span>
+        </div>
+
+        <div class="form-group">
+            <label>PIN Kodu (Varsayılan: 0000):</label>
+            <input type="password" id="adult-pin" placeholder="PIN Kodunuzu girin" maxlength="8" style="letter-spacing: 4px; font-size: 1.2rem; text-align: center;">
+        </div>
+
+        <div class="btn-row">
+            <button class="btn" style="background: #27ae60; color: #fff;" onclick="toggleAdultLock('unlock')">🔓 Kilidi Aç</button>
+            <button class="btn" style="background: #e74c3c; color: #fff;" onclick="toggleAdultLock('lock')">🔒 Kilitle</button>
+        </div>
+
+        <div id="adult-toast" class="toast"></div>
+    </div>
+
+    <script>
+        let currentTab = 'm3u';
+
+        function switchTab(t) {
+            currentTab = t;
+            document.getElementById('tab-m3u').classList.toggle('active', t === 'm3u');
+            document.getElementById('tab-xtream').classList.toggle('active', t === 'xtream');
+            document.getElementById('form-m3u').style.display = t === 'm3u' ? 'block' : 'none';
+            document.getElementById('form-xtream').style.display = t === 'xtream' ? 'block' : 'none';
+        }
+
+        async function pasteClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) document.getElementById('m3u-url').value = text;
+            } catch (e) {
+                document.getElementById('m3u-url').focus();
+            }
+        }
+
+        async function sendM3U() {
+            const url = document.getElementById('m3u-url').value.trim();
+            if (!url) return showToast('Lütfen geçerli bir URL girin!', 'error');
+            await postData({ type: 'm3u', url });
+        }
+
+        async function sendXtream() {
+            const server = document.getElementById('xt-server').value.trim();
+            const username = document.getElementById('xt-user').value.trim();
+            const password = document.getElementById('xt-pass').value.trim();
+            if (!server || !username || !password) return showToast('Lütfen tüm Xtream alanlarını doldurun!', 'error');
+            await postData({ type: 'xtream', server, username, password });
+        }
+
+        async function postData(payload) {
+            try {
+                const res = await fetch('/api/set-playlist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showToast('✅ Başarıyla Gönderildi! Televizyonunuzda yükleniyor...', 'success');
+                } else {
+                    showToast('Hata: ' + (data.error || 'Gönderilemedi'), 'error');
+                }
+            } catch (err) {
+                showToast('Ağ Hatası: ' + err.message, 'error');
+            }
+        }
+
+        function showToast(msg, type) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.className = 'toast ' + type;
+        }
+
+        async function checkAdultStatus() {
+            try {
+                const res = await fetch('/api/adult-status');
+                const data = await res.json();
+                const badge = document.getElementById('adult-status-badge');
+                if (data.isUnlocked) {
+                    badge.innerText = '🔓 AÇIK (TV\'DE GÖRÜNÜR)';
+                    badge.style.background = 'rgba(46, 204, 113, 0.2)';
+                    badge.style.color = '#2ecc71';
+                } else {
+                    badge.innerText = '🔒 KİLİTLİ (GİZLİ)';
+                    badge.style.background = 'rgba(231, 76, 60, 0.2)';
+                    badge.style.color = '#e74c3c';
+                }
+            } catch (e) {}
+        }
+
+        async function toggleAdultLock(action) {
+            const pin = document.getElementById('adult-pin').value.trim();
+            const toast = document.getElementById('adult-toast');
+            if (action === 'unlock' && !pin) {
+                toast.innerText = 'Lütfen PIN kodunu girin!';
+                toast.className = 'toast error';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/adult-lock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, pin })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    toast.innerText = (action === 'unlock' ? '🔓 Kilit Açıldı! TV\'de liste yenilenince yetişkin kanalları görünecektir.' : '🔒 Kilitlendi! TV\'den yetişkin kanalları gizlendi.');
+                    toast.className = 'toast success';
+                    checkAdultStatus();
+                } else {
+                    toast.innerText = 'Hata: ' + (data.error || 'İşlem başarısız');
+                    toast.className = 'toast error';
+                }
+            } catch (err) {
+                toast.innerText = 'Ağ Hatası: ' + err.message;
+                toast.className = 'toast error';
+            }
+        }
+
+        checkAdultStatus();
+    </script>
+</body>
+</html>

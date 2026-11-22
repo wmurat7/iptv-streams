@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" 
+        xmlns:tizen="http://tizen.org/ns/widgets" 
+        id="http://pluswalnut.com/TizenIPTVPlayer" 
+        version="1.0.0" 
+        viewmodes="fullscreen">
+    <tizen:application id="Xk6y5u2h0q.TizenIPTVPlayer" 
+                       package="Xk6y5u2h0q" 
+                       type="web" 
+                       required_version="4.0"/>
+    <content src="index.html"/>
+    <feature name="http://tizen.org/feature/screen.size.all"/>
+    <icon src="icons/icon.png"/>
+    <name>Pro IPTV Player</name>
+    <tizen:profile name="tv-samsung"/>
+    
+    <!-- Privileges for video playback, networking, storage & remote controls -->
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
+    <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+    <tizen:privilege name="http://tizen.org/privilege/application.launch"/>
+    <tizen:privilege name="http://tizen.org/privilege/tv.audio"/>
+    <tizen:privilege name="http://tizen.org/privilege/avplay"/>
+    
+    <tizen:setting screen-orientation="landscape" 
+                   context-menu="disable" 
+                   background-support="disable" 
+                   encryption="disable" 
+                   install-location="auto"/>
+</widget>
